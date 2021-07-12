@@ -2,12 +2,12 @@
 
 const Server = require('./server')
 const NodeRSA = require('node-rsa')
-const plugins = [
-  require('./server/handshake'),
-  require('./server/keepalive'),
-  require('./server/login'),
-  require('./server/ping')
-]
+const Plugins = {
+  handshake: require('./server/handshake'),
+  keepalive: require('./server/keepalive'),
+  login: require('./server/login'),
+  ping: require('./server/ping')
+}
 
 module.exports = createServer
 
@@ -22,7 +22,8 @@ function createServer (options = {}) {
     maxPlayers: maxPlayersNew = 20,
     version,
     favicon,
-    customPackets
+    customPackets,
+    plugins = ["handshake", "keepalive", "login", "ping"]
   } = options
 
   const maxPlayers = options['max-players'] !== undefined ? maxPlayersOld : maxPlayersNew
@@ -44,7 +45,10 @@ function createServer (options = {}) {
   server.serverKey = new NodeRSA({ b: 1024 })
 
   server.on('connection', function (client) {
-    plugins.forEach(plugin => plugin(client, server, options))
+    //plugins.forEach(plugin => plugin(client, server, options))
+    plugins.forEach(plugin => {
+      if (Plugins.hasOwnProperty(plugin)) Plugins[plugin](client, server, options);
+    });
   })
   server.listen(port, host)
   return server
