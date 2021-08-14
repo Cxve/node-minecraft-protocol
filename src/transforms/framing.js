@@ -12,7 +12,7 @@ module.exports.createFramer = function () {
 }
 
 class Framer extends Transform {
-  _transform (chunk, enc, cb) {
+  _transform(chunk, enc, cb) {
     const varIntSize = sizeOfVarInt(chunk.length)
     const buffer = Buffer.alloc(varIntSize + chunk.length)
     writeVarInt(chunk.length, buffer, 0)
@@ -25,13 +25,13 @@ class Framer extends Transform {
 const LEGACY_PING_PACKET_ID = 0xfe
 
 class Splitter extends Transform {
-  constructor () {
+  constructor() {
     super()
     this.buffer = Buffer.alloc(0)
     this.recognizeLegacyPing = false
   }
 
-  _transform (chunk, enc, cb) {
+  _transform(chunk, enc, cb) {
     this.buffer = Buffer.concat([this.buffer, chunk])
 
     if (this.recognizeLegacyPing && this.buffer[0] === LEGACY_PING_PACKET_ID) {
@@ -52,19 +52,24 @@ class Splitter extends Transform {
       ({ value, size } = readVarInt(this.buffer, offset))
     } catch (e) {
       if (!(e.partialReadError)) {
-        throw e
-      } else { stop = true }
+        console.error(e); //throw e
+      } else {
+        stop = true;
+      }
     }
     if (!stop) {
-      while (this.buffer.length >= offset + size + value) {
+      while (this.buffer.length >= offset + size + value && value >= 0) {
         try {
           this.push(this.buffer.slice(offset + size, offset + size + value))
           offset += size + value;
           ({ value, size } = readVarInt(this.buffer, offset))
         } catch (e) {
           if (e.partialReadError) {
-            break
-          } else { throw e }
+            //break
+          } else {
+            console.error(e); //throw e
+          }
+          break; // added by me lol
         }
       }
     }
