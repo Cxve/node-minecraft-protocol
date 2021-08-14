@@ -1,11 +1,9 @@
-/// <reference types="node" />
-
-import { EventEmitter } from 'events';
-import { Socket } from 'net'
-import * as Stream from 'stream'
-import { Agent } from 'http'
-
 declare module 'minecraft-protocol' {
+	import { EventEmitter } from 'events';
+	import { Socket } from 'net'
+	import * as Stream from 'stream'
+	import { Agent } from 'http'
+	import { Splitter } from 'minecraft-protocol/src/transforms/framing';
 	export class Client extends EventEmitter {
 		constructor(isServer: boolean, version: string, customPackets?: any)
 		isServer: boolean
@@ -14,12 +12,13 @@ declare module 'minecraft-protocol' {
 		session: any
 		socket: Socket
 		state: States
+		splitter: Splitter
 		username: string
 		uuid: string
 		protocolVersion: number
 		connect(port: number, host: string): void
 		setSocket(socket: Socket): void
-		end(reason: string): void
+		end(reason: string, fullReason: string): void
 		registerChannel(name: string, typeDefinition: any, custom?: boolean): void
 		unregisterChannel(name: string): void
 		write(name: string, params: any): void
@@ -80,8 +79,9 @@ declare module 'minecraft-protocol' {
 		maxPlayers?: number
 		motd?: string
 		port?: number
+		plugins?: ("handshake" | "keepalive" | "login" | "ping")[];
 		version?: string
-		beforePing?: (response: any, client: Client, callback?: (result: any) => any) => any
+		beforePing?: (response: NewPingResult | OldPingResult, client: Client, callback?: (err: Error | null, response: NewPingResult | OldPingResult) => NewPingResult | OldPingResult) => any
 		beforeLogin?: (client: Client) => void
 		errorHandler?: (client: Client, error: Error) => void
 		agent?: Agent
@@ -128,7 +128,7 @@ declare module 'minecraft-protocol' {
 	}
 
 	export interface NewPingResult {
-		description: string
+		description: any
 		players: {
 			max: number
 			online: number
@@ -139,7 +139,7 @@ declare module 'minecraft-protocol' {
 		}
 		version: {
 			name: string
-			protocol: string
+			protocol: number
 		}
 		favicon: string
 		latency: number
@@ -156,4 +156,20 @@ declare module 'minecraft-protocol' {
 	export function createDeserializer({ state, isServer, version, customPackets }: SerializerOptions): any
 
 	export function ping(options: PingOptions, callback: (error: Error, result: OldPingResult | NewPingResult) => void): void
+}
+
+declare module 'minecraft-protocol/src/transforms/framing' {
+    import { Transform } from 'readable-stream';
+    
+    export class Framer extends Transform {
+        _transform(chunk: any, enc: any, cb: () => any): any;
+    }
+
+    export class Splitter extends Transform {
+        constructor();
+        _transform(chunk: any, enc: any, cb: () => any): any;
+    }
+
+    export function createSplitter(): Splitter;
+    export function createFramer(): Framer;
 }
